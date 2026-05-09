@@ -1,4 +1,3 @@
-import multiprocessing as mp
 from typing import cast
 
 import anyio
@@ -16,6 +15,7 @@ from exo.shared.types.text_generation import (
 )
 from exo.shared.types.worker.instances import BoundInstance, InstanceId
 from exo.shared.types.worker.runners import RunnerFailed, RunnerId
+from exo.utils.async_process import AsyncProcess
 from exo.utils.channels import channel, mp_channel
 from exo.worker.runner.supervisor import RunnerSupervisor
 from exo.worker.tests.unittests.conftest import get_bound_mlx_ring_instance
@@ -24,23 +24,11 @@ from exo.worker.tests.unittests.conftest import get_bound_mlx_ring_instance
 class _DeadProcess:
     exitcode = -6
 
-    def start(self) -> None:
-        return None
-
     def is_alive(self) -> bool:
         return False
 
-    def join(self, _timeout: float | None = None) -> None:
-        return None
 
-    def terminate(self) -> None:
-        return None
-
-    def kill(self) -> None:
-        return None
-
-
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_check_runner_emits_error_chunk_for_inflight_text_generation() -> None:
     event_sender, event_receiver = channel[Event]()
     task_sender, _ = mp_channel[Task]()
@@ -57,7 +45,7 @@ async def test_check_runner_emits_error_chunk_for_inflight_text_generation() -> 
     supervisor = RunnerSupervisor(
         shard_metadata=bound_instance.bound_shard,
         bound_instance=bound_instance,
-        runner_process=cast("mp.Process", cast(object, _DeadProcess())),
+        runner_process=cast(AsyncProcess, cast(object, _DeadProcess())),
         initialize_timeout=400,
         _ev_recv=ev_recv,
         _task_sender=task_sender,
